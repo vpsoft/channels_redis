@@ -338,8 +338,13 @@ class RedisChannelLayer(BaseChannelLayer):
             # and the script executes atomically...
             await connection.eval(cleanup_script, keys=[], args=[channel, backup_queue])
             # ...and it doesn't matter here either, the message will be safe in the backup.
-            _, member, timestamp = await connection.bzpopmin(channel, timeout=timeout)
-            await connection.zadd(backup_queue, float(timestamp), member)
+            result = await connection.bzpopmin(channel, timeout=timeout)
+
+            if result is not None:
+                _, member, timestamp = result
+                await connection.zadd(backup_queue, float(timestamp), member)
+            else:
+                member = None
 
             return member
 
